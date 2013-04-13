@@ -1,0 +1,310 @@
+<!--
+	Credit for an awesome tutorial, most of the code in here comes from this:"jacebook.co.uk/blog/2010/09/11/html5-writing-a-game/"
+-->
+
+
+<br/>
+<body><br/>
+    <input id="BtnImgStart" type="button" value="Start/Stop"/><br/>
+    <div id="container" style="border:1px solid; cursor:none; width:480px; height:320px;"><br/>
+        <canvas id="canvas" width="480" height="320"><br/>
+        </canvas><br/>
+    </div><br/>
+</body><br/>
+<script type="text/javascript" src="http://code.jquery.com/jquery-1.4.2.js"></script>
+<script>
+	var speed=3;
+	
+	var showBounds=true;
+	var playerImg= new Image();
+	var badGuyImg= new Image();
+	var obstacleImg1= new Image();
+	var obstacleImg2= new Image();
+	var backgroundImg= new Image();
+	
+	var gameloopId;
+	var frameCount=0;
+	var fromCountId;
+	var score=0;
+	var gameRunning=false;
+	var ctx;
+	var screenWidth;
+	var screenHeight;
+	
+	function GameObject()
+	{
+		this.x=0;
+		this.y=0;
+		this.image=null;
+	}
+	function Player() {};
+	Player.prototype= new GameObject();
+	Player.prototype.isJumping= false;
+	Player.prototype.isDead=false;
+	
+	var player=new Player();
+	
+	function Obstacle(){};
+	Obstacle.prototype= new GameObject();
+	
+	var obstacle_1 = new Obstacle();
+	var obstacle_2=new Obstacle();
+	
+	function Bad_Guy (){};
+	Bad_Guy.prototype= new GameObject();
+	Bad_Guy.prototype.hit = false;
+	
+	var bad_guy1 = new Bad_Guy();
+	
+	function Collider (){};
+	Collider.prototype= new GameObject();
+	Collider.hit= false;
+	
+	var bad_guy_1_collider= new Collider();
+	
+	$(window).ready(function(){
+		init();
+	});
+	
+	function init(){
+		loadImages();
+		initSettings();
+		addEventHandlers();
+		startGame();
+		startFPSCounter();
+	}
+	
+	function startGame(){
+		score=0;
+	}
+function startFPSCounter()
+	{
+		var start = new Date().getTime(),
+			time = 0;
+		function instance()
+		{
+			time += 1000;
+			fps();
+			
+			var diff = (new Date().getTime() - start) - time;
+			window.setTimeout(instance, (1000 - diff));
+		}
+		window.setTimeout(instance, 1000);
+	
+	}
+	
+	function addEventHandlers()
+	{
+		//space to jump
+		$("#container").keydown(function(event){
+			if(event.which == 32){
+				player.y+=5;
+			}
+			else{}
+		});
+		
+		$("#BtnImgStart").click(function(){
+			toggleGameplay();
+		});
+	}
+	
+	function initSettings()
+	{
+		ctx= document.getElementById('canvas').getContext('2d');
+		
+		screenWidth= parseInt($("#canvas").attr("width"));	
+		screenHeight= parseInt($("#canvas").attr("height"));
+		
+		//setup player & obstacle placement here
+	
+	}
+	
+	function loadImages()
+	{
+	
+		playerImg.src="images/player.gif";
+		badGuyImg.src="images/Bad_Guy.gif";
+		obstacleImg1.src="images/obstacle1.gif";
+		obstacleImg2.src="images/obstacle2.gif";
+		backgroundImg.src="images/background.jpg";
+		
+		player.image=playerImg;
+		bad_guy1.image=badGuyImg;
+		obstacle_1.image=obstacleImg1;
+		obstacle_2.image=obstacleImg2;
+		
+		
+		backgroundImg.onLoad=function(){gameLoop();};
+	}
+	
+	function drawPlayer()
+	{
+		showObjectBounds(player);
+		
+		if(!player.isDead)
+		{
+			ctx.drawImage(player.image, player.x, player.y);
+		}
+		else {}
+	}
+	
+	function drawObstacles()
+	{
+		showObjectBounds(obstacle_1);
+		showObjectBounds(obstacle_2);
+		
+		ctx.drawImage(obstacle_1.image, obstacle_1.x, obstacle_1.y);
+		ctx.drawImage(obstacle_2.image, obstacle_2.x, obstacle_2.y);
+	}
+	function drawBadGuys()
+	{
+		if (!bad_guy1.hit)
+		{
+			showObjectBounds(bad_guy1);
+			
+			ctx.drawImage(bad_guy1.image, bad_guy1.x, bad_guy1.y);
+		}
+	}
+	
+	
+	function hasPlayerHitObstacle(){
+		if (checkIntersect(player, obstacle_1,0))
+		{
+			gameOver();
+		}
+		else if (checkIntersect(player, obstacle_2,0))
+		{
+			gameOver();
+		}
+		else if (checkIntersect(player,bad_guy_1_collider,0))
+		{
+			bad_guy1.hit=true;
+		}
+		else if ( checkIntersect(player, bad_guy1,0))
+		{
+			gameOver();
+		}
+		else
+		{
+		}
+	}
+	function gameLoop(){
+		ctx.clearRect(0,0, screenWidth, screenHeight);
+		
+		player.x+= speed;
+		ctx.drawImage(backgroundImg,0,0);
+		
+		drawBadGuys();
+		drawPlayer();
+		drawObstacles
+		hasPlayerHitObstacle();
+		
+		frameCount++;
+	}
+	
+	// Credit:"jacebook.co.uk/blog/2010/09/11/html5-writing-a-game/"
+		function checkIntersect(object1, object2, overlap)
+	{
+		//    x-Axis                      x-Axis
+		//  A1------>B1 C1              A2------>B2 C2
+		//  +--------+   ^              +--------+   ^ 
+		//  | object1|   | y-Axis       | object2|   | y-Axis
+		//  |        |   |              |        |   |
+		//  +--------+  D1              +--------+  D2
+		//
+		
+		A1 = object1.x + overlap;
+		B1 = object1.x + object1.image.width - overlap;
+		C1 = object1.y + overlap; 
+		D1 = object1.y + object1.image.height - overlap;
+		
+		A2 = object2.x + overlap;
+		B2 = object2.x + object2.image.width - overlap;
+		C2 = object2.y + overlap;
+		D2 = object2.y + object2.image.width - overlap;
+		
+		//Do they overlap on the x-Axis
+		if(A1 > A2 && A1 < B2
+		   || B1 > A2 && B1 < B2)
+		{
+			//x axis intersects so check y axis
+			if(C1 > C2 && C1 < D2
+		   || D1 > C2 && D1 < D2)
+			{
+				//overlap
+				return true;
+			}
+			
+		}
+		//as you were
+		return false;
+	}
+		function showObjectBounds(gameObject, transitionX, transitionY)
+	{
+			
+		if(showBounds)
+		{
+			if(typeof(transitionX) != 'undefined')
+				rectX = transitionX;
+			else
+				rectX = gameObject.x;
+			
+			if(typeof(transitionY) != 'undefined')
+				rectY = transitionY;
+			else
+				rectY = gameObject.y;
+				
+			ctx.save();
+			
+			ctx.strokeStyle = '#f00'; // red
+			ctx.lineWidth   = 2;
+			ctx.strokeRect(rectX, rectY, gameObject.image.width, gameObject.image.height);
+			
+			ctx.restore();
+		}
+	}
+	
+	//Update the display to show frames per second and reset ready for next count
+	function fps()
+	{
+		$("#fps").html(frameCount + " fps");
+		frameCount=0;
+	}
+	
+	//Start game timer, i.e. setTimeout that calls itself taking into account the
+	//actual real difference in time. This is better than 
+	function startGameTimer()
+	{
+		var start = new Date().getTime(),
+			time = 0;
+		function timer()
+		{
+			time += 15;
+			var diff = (new Date().getTime() - start) - time;
+			if(gameRunning)
+			{
+				gameLoop();
+				window.setTimeout(timer, (15 - diff));
+			}
+		}
+		if(gameRunning)
+			window.setTimeout(timer, 15);
+	}
+	
+	//Start/stop the game loop (and more importantly that annoying boinging!)
+	function toggleGameplay()
+	{
+		gameRunning = !gameRunning;
+		
+		if(gameRunning)
+		{
+			$("#BtnImgStart").hide();
+			startGameTimer();
+		}
+		else
+		{
+			
+		}
+	}
+</script>
+
